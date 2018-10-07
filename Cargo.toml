@@ -1,0 +1,9 @@
+[package]
+name = "mars"
+version = "0.1.0"
+authors = ["wintermute"]
+edition = "2018"
+
+[dependencies]
+minifb = "*"
+nalgebra = "0.16.0"
