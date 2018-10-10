@@ -7,14 +7,26 @@ pub struct HitableList {
 
 impl HitableList {
     pub fn new(list: Vec<Box<Hitable>>) -> HitableList {
-        Hitable {
+        HitableList {
             list
         }
     }
 }
 
 impl Hitable for HitableList {
-    fn hit(ray_in: &Ray, t_min: f32, t_mac: f32, record: &HitRecord) -> bool {
-        let mut temp_rec = HitRecord;
+    fn hit(&self, ray_in: &Ray, t_min: f32, t_max: f32, record: &mut HitRecord) -> bool {
+        let mut temp_rec = HitRecord::empty();
+
+        let mut hit_anything = false;
+        let mut closest_so_far = t_max;
+
+        for hitable in &self.list {
+            if hitable.hit(ray_in, t_min, t_max, &mut temp_rec)  {
+                hit_anything = true;
+                closest_so_far = temp_rec.t;
+                record.copy_over(&temp_rec);
+            }
+        }
+        return hit_anything;
     }
 }
