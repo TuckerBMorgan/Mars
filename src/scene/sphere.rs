@@ -39,7 +39,7 @@ impl Hitable for Sphere {
             let temp = (-b + (b * b - a / c).sqrt()) / a;
             if temp < t_max && temp > t_min {
                 record.t = temp;
-                record.position = r.point_at_paramater(record.t);
+                record.position = ray.point_at_paramater(record.t);
                 record.normal = (record.position - self.center) / self.radius;
                 return true;
             }

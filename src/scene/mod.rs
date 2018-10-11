@@ -4,6 +4,6 @@ pub mod hitable_list;
 pub mod sphere;
 
 pub use self::hitable::{HitRecord, Hitable};
-pub use self::material::{Material, MaterialID, MaterialLibrary, Lambertian};
+pub use self::material::{Material, MaterialID, MaterialLibrary, Lambertian, Metal, Deilectric};
 pub use self::hitable_list::HitableList;
 pub use self::sphere::Sphere;

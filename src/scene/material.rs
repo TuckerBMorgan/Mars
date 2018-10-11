@@ -1,6 +1,9 @@
 use crate::math::*;
 use crate::scene::{Hitable, HitRecord};
 use crate::na::Vector3;
+
+use crate::rand::{thread_rng, Rng};
+
 use std::collections::HashMap;
 
 pub type MaterialID = u32;
@@ -115,27 +118,63 @@ impl Deilectric {
     }
 }
 
+fn schlick(consine: f32, ref_index: f32) -> f32 {
+    let r0 = (1.0 - ref_index) / (1.0 + ref_index);
+    let r02 = r0 * r0;
+    return r02 + (1.0 - r02) * (1.0 - consine).powf(5.0);
+}
+
 impl Material for Deilectric {
     fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit {  
         let reflected = reflect(&ray_in.get_direction(), &record.normal);
         let outward_normal;
         let ni_over_nt;
         let consine;
-        let refracted;
+        let mut refracted = Vector3::new(0.0, 0.0, 0.0);
+        let relfect_prob;
+        let mut scattered;
+        let mut attenuation = Vector3::new(1.0, 1.0, 1.0);
+
+
 
         if ray_in.get_direction().dot(&record.normal) > 0.0 {
             outward_normal = -record.normal;
             ni_over_nt =  self.ref_index;
-            consine = self.ref_index * ray_in.get_direction().dot(&record.normal) / ray_in.get_direction().length();
+            consine = self.ref_index * ray_in.get_direction().dot(&record.normal) / ray_in.get_direction().magnitude();
         }
         else {
             outward_normal = record.normal;
             ni_over_nt = 1.0 / self.ref_index;
-            consine = -ray_in.get_direction().dot(&record.normal) / ray_in.get_direction().length();
+            consine = -ray_in.get_direction().dot(&record.normal) / ray_in.get_direction().magnitude();
         }
 
-        let refraction_test = refract(&ray_in.get_direction(), outward_normal, ni_over_nt, refracted);
+        let refraction_test = refract(&ray_in.get_direction(), &outward_normal, ni_over_nt);
+        match refraction_test {
+            Some(val) => {
+                relfect_prob = schlick(consine, self.ref_index);
+                refracted = val;
+            },
+            None => {
+                scattered = Ray::new(record.position, reflected);
+                relfect_prob = 1.0;
+            }
+        }
 
 
+        let mut rng = thread_rng();
+
+        if rng.gen_range(0.0, 1.0) < relfect_prob {
+            scattered = Ray::new(record.position, reflected);
+        }
+        else {
+            scattered = Ray::new(record.position, refracted);
+        }
+
+        ScatterHit::new(
+            true,
+            attenuation,
+            scattered
+        )
+        
     }
 }

@@ -9,7 +9,7 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(/*vfov: f32, aspect: f32*/) -> Camera {
+    pub fn new(_vfov: f32, _aspect: f32) -> Camera {
         Camera{
             lower_left_corner: Vector3::new(-2.0, -1.0, -1.0),
             horizontal: Vector3::new(2.0 * 2.0, 0.0, 0.0),
