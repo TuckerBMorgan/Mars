@@ -5,6 +5,7 @@ authors = ["wintermute"]
 edition = "2018"
 
 [dependencies]
-minifb = "*"
+minifb = { git = "/Users/tucker_morgan/Documents/rust_minifb"}
 nalgebra = "0.16.0"
 rand = "*"
+image = "*"
