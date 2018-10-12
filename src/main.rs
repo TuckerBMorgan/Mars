@@ -10,7 +10,7 @@ pub mod controls;
 pub mod scene;
 
 use std::f32;
-use rand::{thread_rng, Rng};
+
 
 use self::na::Vector3;
 
@@ -20,12 +20,6 @@ use self::scene::*;
 
 const WIDTH: usize = 640;
 const HEIGHT: usize = 360;
-
-pub fn random_in_unit_vector() -> Vector3<f32>{
-    let mut rng = thread_rng();
-    Vector3::new(rand::random::<f32>(), rand::random::<f32>(), rand::random::<f32>()).normalize() * rng.gen_range(0.0, 1.0)
-}
-
 
 pub fn color(ray: &Ray, world: &Hitable, depth: i32, material_library: &MaterialLibrary) -> Vector3<f32> {
     let mut record : HitRecord = HitRecord::empty();
@@ -60,6 +54,16 @@ pub fn color(ray: &Ray, world: &Hitable, depth: i32, material_library: &Material
 }
 
 fn main() {
+    let mut material_library = MaterialLibrary::new();
+    let lambert_1_id = material_library.add_new(Box::new(Lambertian::new(Vector3::new(0.8, 0.3, 0.3))));
+    let lambert_2_id = material_library.add_new(Box::new(Lambertian::new(Vector3::new(0.8, 0.8, 0.0))));
+
+
+    let mut world = vec![
+        Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5, lambert_1_id),
+        Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0, lambert_2_id),
+
+    ];
 
     for y in 0..300 {
         for x in 0..300 {
