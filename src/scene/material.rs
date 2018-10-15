@@ -27,7 +27,7 @@ impl MaterialLibrary {
         return self.material_id_counter;
     }
 
-    
+    #[inline]
     pub fn checkout_material(&self, material_id: MaterialID) -> Option<&Box<Material>> {
         return self.library.get(&material_id);
     }
@@ -67,7 +67,7 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit {
+    fn scatter(&self, _ray_in: &Ray, record: &HitRecord) -> ScatterHit {
         let target = record.position + record.normal + random_in_unit_sphere();
         ScatterHit::new(
             true,
@@ -118,6 +118,7 @@ impl Deilectric {
     }
 }
 
+#[inline]
 fn schlick(consine: f32, ref_index: f32) -> f32 {
     let r0 = (1.0 - ref_index) / (1.0 + ref_index);
     let r02 = r0 * r0;
@@ -133,9 +134,7 @@ impl Material for Deilectric {
         let mut refracted = Vector3::new(0.0, 0.0, 0.0);
         let relfect_prob;
         let mut scattered;
-        let mut attenuation = Vector3::new(1.0, 1.0, 1.0);
-
-
+        let attenuation = Vector3::new(1.0, 1.0, 1.0);
 
         if ray_in.get_direction().dot(&record.normal) > 0.0 {
             outward_normal = -record.normal;

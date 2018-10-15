@@ -17,27 +17,19 @@ impl Sphere {
             material_id
         }
     }
-}
 
-impl Hitable for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32, record: &mut HitRecord) -> bool {
-        let oc = ray.get_origin() - self.center;
-        let a = ray.get_direction().dot(&ray.get_direction());
-        let b = oc.dot(&ray.get_direction());
-        let c = oc.dot(&oc) - self.radius * self.radius;
-        record.material = self.material_id;
-        let d = b * b - a * c;
-
+    pub fn other(&self, ray: &Ray, t_min: f32, t_max: f32, oc: &Vector3<f32>, a: f32, b: f32, c: f32, d: f32, record: &mut HitRecord) -> bool {
         if d > 0.0 {
-            let temp = (-b - (b * b - a * c).sqrt()) / a;
+            let temp = (-b - d) / a;
             if temp < t_max && temp > t_min {
                 record.t = temp;
                 record.position = ray.point_at_paramater(record.t);
                 record.normal = (record.position - self.center) / self.radius;
                 return true;
             }
-            let temp = (-b + (b * b - a / c).sqrt()) / a;
+            let temp = (-b + d) / a;
             if temp < t_max && temp > t_min {
+
                 record.t = temp;
                 record.position = ray.point_at_paramater(record.t);
                 record.normal = (record.position - self.center) / self.radius;
@@ -46,5 +38,19 @@ impl Hitable for Sphere {
         }
 
         return false;
+    }
+}
+
+impl Hitable for Sphere {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32, record: &mut HitRecord) -> bool {
+        
+//        let oc = ray.get_origin() - self.center;
+        let oc = Vector3::new(ray.origin.x - self.center.x, ray.origin.y - self.center.y, ray.origin.z - self.center.z);
+        let a = ray.direction.dot(&ray.direction);
+        let b = oc.dot(&ray.direction);
+        let c = oc.dot(&oc) - self.radius * self.radius;
+        record.material = self.material_id;
+        let d = (b * b - a * c).sqrt();
+        self.other(&ray, t_min, t_max, &oc, a, b, c, d, record)
     }
 }

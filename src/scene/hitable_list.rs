@@ -19,14 +19,15 @@ impl Hitable for HitableList {
 
         let mut hit_anything = false;
         let mut closest_so_far = t_max;
-
+        
         for hitable in &self.list {
-            if hitable.hit(ray_in, t_min, t_max, &mut temp_rec)  {
+            if hitable.hit(ray_in, t_min, closest_so_far, &mut temp_rec) == true {
                 hit_anything = true;
                 closest_so_far = temp_rec.t;
                 record.copy_over(&temp_rec);
             }
         }
+        
         return hit_anything;
     }
 }
