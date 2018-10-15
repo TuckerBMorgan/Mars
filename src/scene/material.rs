@@ -10,7 +10,7 @@ pub type MaterialID = u32;
 
 pub struct MaterialLibrary {
     material_id_counter: MaterialID,
-    library: HashMap<MaterialID, Box<Material>>
+    library: HashMap<MaterialID, Box<Material + Send>>
 }
 
 impl MaterialLibrary {
@@ -21,14 +21,14 @@ impl MaterialLibrary {
         }
     }
 
-    pub fn add_new(&mut self, material: Box<Material>) -> MaterialID {
+    pub fn add_new(&mut self, material: Box<Material + Send>) -> MaterialID {
         self.material_id_counter += 1;
         self.library.insert(self.material_id_counter, material);
         return self.material_id_counter;
     }
 
     #[inline]
-    pub fn checkout_material(&self, material_id: MaterialID) -> Option<&Box<Material>> {
+    pub fn checkout_material(&self, material_id: MaterialID) -> Option<&Box<Material + Send>> {
         return self.library.get(&material_id);
     }
     

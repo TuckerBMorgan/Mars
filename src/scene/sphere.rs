@@ -19,24 +19,21 @@ impl Sphere {
     }
 
     pub fn other(&self, ray: &Ray, t_min: f32, t_max: f32, oc: &Vector3<f32>, a: f32, b: f32, c: f32, d: f32, record: &mut HitRecord) -> bool {
-        if d > 0.0 {
-            let temp = (-b - d) / a;
-            if temp < t_max && temp > t_min {
-                record.t = temp;
-                record.position = ray.point_at_paramater(record.t);
-                record.normal = (record.position - self.center) / self.radius;
-                return true;
-            }
-            let temp = (-b + d) / a;
-            if temp < t_max && temp > t_min {
-
-                record.t = temp;
-                record.position = ray.point_at_paramater(record.t);
-                record.normal = (record.position - self.center) / self.radius;
-                return true;
-            }
+        let temp = (-b - d) / a;
+        if d > 0.0 && temp < t_max && temp > t_min {
+            record.t = temp;
+            record.position = ray.point_at_paramater(record.t);
+            record.normal = (record.position - self.center) / self.radius;
+            return true;
         }
+        let temp = (-b + d) / a;
+        if d > 0.0 && temp < t_max && temp > t_min {
 
+            record.t = temp;
+            record.position = ray.point_at_paramater(record.t);
+            record.normal = (record.position - self.center) / self.radius;
+            return true;
+        }
         return false;
     }
 }

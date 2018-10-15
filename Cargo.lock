@@ -231,7 +231,9 @@ dependencies = [
  "image 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "minifb 0.10.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "nalgebra 0.16.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num_cpus 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "spmc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -509,6 +511,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "spmc"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "syn"
 version = "0.15.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -665,6 +672,7 @@ dependencies = [
 "checksum scopeguard 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "94258f53601af11e6a49f722422f6e3425c52b06245a5cf9bc09908b174f5e27"
 "checksum sdl2 0.31.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a74c2a98a354b20713b90cce70aef9e927e46110d1bc4ef728fd74e0d53eba60"
 "checksum sdl2-sys 0.31.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5c543ce8a6e33a30cb909612eeeb22e693848211a84558d5a00bb11e791b7ab7"
+"checksum spmc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "cd1f11d1fb5fd41834e55ce0b85a186efbf2f2afd9fdb09e2c8d72f9bff1ad1a"
 "checksum syn 0.15.9 (registry+https://github.com/rust-lang/crates.io-index)" = "b10ee269228fb723234fce98e9aac0eaed2bd5f1ad2f6930e8d5b93f04445a1a"
 "checksum tiff 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "a2cc6c4fd13cb1cfd20abdb196e794ceccb29371855b7e7f575945f920a5b3c2"
 "checksum time 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)" = "d825be0eb33fda1a7e68012d51e9c7f451dc1a69391e7fdc197060bb8c56667b"

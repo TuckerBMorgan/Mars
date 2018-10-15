@@ -2,11 +2,11 @@ use crate::scene::{Hitable, HitRecord};
 use crate::math::Ray;
 
 pub struct HitableList {
-    list: Vec<Box<Hitable>>
+    list: Vec<Box<Hitable + Send>>
 }
 
 impl HitableList {
-    pub fn new(list: Vec<Box<Hitable>>) -> HitableList {
+    pub fn new(list: Vec<Box<Hitable + Send>>) -> HitableList {
         HitableList {
             list
         }
