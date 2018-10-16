@@ -233,6 +233,7 @@ dependencies = [
  "nalgebra 0.16.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rayon 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "spmc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

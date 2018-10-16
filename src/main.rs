@@ -1,13 +1,14 @@
-#[macro_use]
 extern crate minifb;
 extern crate nalgebra as na;
 extern crate rand;
 extern crate num_cpus;
+extern crate rayon;
+use crate::rand::{thread_rng, Rng};
 
 use minifb::{Key, WindowOptions, Window};
+use crate::rayon::prelude::*;
 
 
-use crate::rand::{thread_rng, Rng};
 
 pub mod math;
 pub mod controls;
@@ -15,11 +16,9 @@ pub mod scene;
 
 
 use std::f32;
-use std::time::{Duration, Instant};
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc::channel;
 use std::sync::mpsc;
-use std::sync::Mutex;
 use std::thread;
 use std::sync::Arc;
 
@@ -34,6 +33,8 @@ const HEIGHT: usize = 288;
 
 
 pub struct RayTracePixelConfig {
+    world: Arc<Hitable>,
+    material_library: Arc<MaterialLibrary>,
     width: usize,
     height: usize,
     x: u32,
@@ -41,7 +42,8 @@ pub struct RayTracePixelConfig {
     number_of_samples: u32,
     index: usize
 }
-
+unsafe impl Send for RayTracePixelConfig{}
+unsafe impl Sync for RayTracePixelConfig{}
 
 #[derive(Clone, Copy)]
 pub struct PixelColor {
@@ -51,54 +53,40 @@ pub struct PixelColor {
 unsafe impl Send for PixelColor {}
 //unsafe impl Sync for PixelColor {}
 
-pub fn render_thread(world: Arc<Hitable>, rx:Receiver<RayTracePixelConfig>, tx: Sender<PixelColor>) {
+pub fn render_thread(rtpc: &RayTracePixelConfig)  -> PixelColor {
     let mut rng = thread_rng();
-
-    let mut material_library = MaterialLibrary::new();
-    let lambert_1_id = material_library.add_new(Box::new(Lambertian::new(Vector3::new(0.8, 0.3, 0.3))));
-    let lambert_2_id = material_library.add_new(Box::new(Lambertian::new(Vector3::new(0.8, 0.8, 0.0))));
-    let metal_1_id = material_library.add_new(Box::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 0.3)));
-    let dielectric_1_id = material_library.add_new(Box::new(Deilectric::new(1.5)));
 
     let camera = Camera::new(90.0, WIDTH as f32 / HEIGHT as f32);
 
-    loop {
-        let recv = rx.recv();
-        match recv {
-            Ok(val) => {
+    let mut return_color : Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
 
-                let mut return_color = Vector3::new(0.0, 0.0, 0.0);
+    for _ in 0..rtpc.number_of_samples {
+        let x = rtpc.x as f32;
+        let y = rtpc.y as f32;
 
-                for _ in 0..val.number_of_samples {
-                    let x = val.x as f32;
-                    let y = val.y as f32;
-
-                    let u = (x + rng.gen_range(0.0, 1.0)) / val.width as f32;
-                    let v = (y + rng.gen_range(0.0, 1.0)) / val.height  as f32;
-                    let r = camera.get_ray(u, v);
-                    return_color += color(&r, &world, &material_library, 0);
-                }
-
-                let red   = (255.0 * return_color.x).min(255.0).max(0.0);
-                let green = (255.0 * return_color.y).min(255.0).max(0.0);
-                let blue  = (255.0 * return_color.z).min(255.0).max(0.0);
-
-                let final_color = ((red as u32) << 16 | (green as u32) << 8 | (blue as u32)).into();
-                tx.send(PixelColor{color: final_color, index: val.index});
-            },
-            Err(er) => {
-                break;
-            }
-        }
+        let u = (x + rng.gen_range(0.0, 1.0)) / rtpc.width as f32;
+        let v = (y + rng.gen_range(0.0, 1.0)) / rtpc.height  as f32;
+        let r = camera.get_ray(u, v);
+        return_color += color(&r, rtpc.world.clone(), &rtpc.material_library, 0);
     }
 
+    return_color.x /= rtpc.number_of_samples as f32;
+    return_color.y /= rtpc.number_of_samples as f32;
+    return_color.z /= rtpc.number_of_samples as f32;
+
+    let red   = (255.0 * return_color.x).min(255.0).max(0.0);
+    let green = (255.0 * return_color.y).min(255.0).max(0.0);
+    let blue  = (255.0 * return_color.z).min(255.0).max(0.0);
+
+    let final_color = ((red as u32) << 16 | (green as u32) << 8 | (blue as u32)).into();
+    return PixelColor{color: final_color, index: rtpc.index};
 }
 
 #[inline]
-pub fn color(ray: &Ray, world: &Hitable, material_library: &MaterialLibrary, depth: i32) -> Vector3<f32> {
+pub fn color(ray: &Ray, world: Arc<Hitable>, material_library: &MaterialLibrary, depth: i32) -> Vector3<f32> {
 
     let mut record : HitRecord = HitRecord::empty();
-    if depth > 50 {
+    if depth > 10 {
         return Vector3::new(0.0, 0.0, 0.0);
     }
 
@@ -123,13 +111,14 @@ pub fn color(ray: &Ray, world: &Hitable, material_library: &MaterialLibrary, dep
     return (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
 }
 
-fn start_up_threads(number_of_threads: usize) -> (Vec<(thread::JoinHandle<()>, Sender<RayTracePixelConfig>)>, Receiver<PixelColor>) {
+fn main() {
 
     let mut material_library = MaterialLibrary::new();
     let lambert_1_id = material_library.add_new(Box::new(Lambertian::new(Vector3::new(0.8, 0.3, 0.3))));
     let lambert_2_id = material_library.add_new(Box::new(Lambertian::new(Vector3::new(0.8, 0.8, 0.0))));
     let metal_1_id = material_library.add_new(Box::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 0.3)));
     let dielectric_1_id = material_library.add_new(Box::new(Deilectric::new(1.5)));
+    let arc_material_library = Arc::new(material_library);
 
     let world_list : Vec<Box<Hitable  + Send>> = vec![
         Box::new(Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5, lambert_1_id)),
@@ -140,23 +129,7 @@ fn start_up_threads(number_of_threads: usize) -> (Vec<(thread::JoinHandle<()>, S
     let world = HitableList::new(world_list);
     let arc_world = Arc::new(world);
 
-    let mut join_handles = vec![];
-    let (pixel_tx, pixel_rx) : (Sender<PixelColor>, Receiver<PixelColor>) = mpsc::channel();
-    for _ in 0..number_of_threads {
-        let (tx, rx) = channel();
-        let pixel_tx_clone = pixel_tx.clone();
-        let world_arc_clone = Arc::clone(&arc_world);
-        let jh = thread::spawn(move ||{render_thread(world_arc_clone, rx, pixel_tx_clone)});
-        join_handles.push((jh, tx));
-    }
-    return (join_handles, pixel_rx);
-}
 
-fn main() {
-
-    let(thread_comms, final_results) = start_up_threads(num_cpus::get());
-    
-    
     let mut buffer: Vec<u32> = vec![0;WIDTH * HEIGHT];
     let mut window = Window::new("Test - ESC to exit", WIDTH, HEIGHT, WindowOptions::default()).unwrap_or_else(|e|{
         panic!("{}", e);
@@ -164,36 +137,34 @@ fn main() {
 //    window.
     let mut frame_count = 0;
 
-    while window.is_open() && !window.is_key_down(Key::Escape) {
-
+    while true {
+        
         let mut ray_trace_pixel_configs = vec![];
         let mut count = 0;
+
         for y in (0..HEIGHT).rev() {
             for x in 0..WIDTH {
                 let rtpc = RayTracePixelConfig {
+                    world: arc_world.clone(),
+                    material_library: arc_material_library.clone(),
                     width: WIDTH,
                     height: HEIGHT,
                     x: x as u32,
                     y: y as u32,
-                    number_of_samples: 1,
+                    number_of_samples: 4,
                     index: count
                 };
-
                 ray_trace_pixel_configs.push(rtpc);
                 count += 1;
             }
         }
-/*
-        while ray_trace_pixel_configs.is_empty() == false {
-            for thread in thread_comms.0.iter() {
 
-            }
+        let par_iter : Vec<PixelColor> = ray_trace_pixel_configs.par_iter().map(|rtpc|render_thread(&rtpc)).collect();
+        for p in par_iter.iter() {
+            buffer[p.index] = p.color;
         }
-*/
 
-        
-        //buffer[count] = final_color; 
-        //frame_count+=1;
+        frame_count+=1;
         window.set_title(frame_count.to_string().as_str());
         window.update_with_buffer(&buffer).unwrap();
     }

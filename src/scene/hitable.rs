@@ -1,6 +1,6 @@
 use crate::na::Vector3;
 use crate::math::Ray;
-use crate::scene::{Material, MaterialID};
+use crate::scene::{MaterialID};
 
 
 pub struct HitRecord {
@@ -29,6 +29,6 @@ impl HitRecord {
     }
 }
 
-pub trait Hitable {
+pub trait Hitable: Send {
     fn hit(&self, ray: &Ray, t_min: f32, t_mac: f32, record: &mut HitRecord) -> bool;
 }

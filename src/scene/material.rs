@@ -1,5 +1,5 @@
 use crate::math::*;
-use crate::scene::{Hitable, HitRecord};
+use crate::scene::{HitRecord};
 use crate::na::Vector3;
 
 use crate::rand::{thread_rng, Rng};
