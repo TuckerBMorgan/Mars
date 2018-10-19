@@ -27,22 +27,26 @@ impl Hitable for Sphere {
         let b = oc.dot(&ray.direction);
         let c = oc.dot(&oc) - self.radius * self.radius;
         record.material = self.material_id;
-        let d = (b * b - a * c).sqrt();
+        let d = (b * b - a * c);
+        if d > 0.0 {
+            
+            let d = d.sqrt();
+            let temp = (-b - d) / a;
+            if temp < t_max && temp > t_min {
+                record.t = temp;
+                record.position = ray.point_at_paramater(record.t);
+                record.normal = (record.position - self.center) / self.radius;
+                return true;
+            }
 
-        let temp = (-b - d) / a;
-        if d > 0.0 && temp < t_max && temp > t_min {
-            record.t = temp;
-            record.position = ray.point_at_paramater(record.t);
-            record.normal = (record.position - self.center) / self.radius;
-            return true;
-        }
-        let temp = (-b + d) / a;
-        if d > 0.0 && temp < t_max && temp > t_min {
+            let temp = (-b + d) / a;
+            if temp < t_max && temp > t_min {
 
-            record.t = temp;
-            record.position = ray.point_at_paramater(record.t);
-            record.normal = (record.position - self.center) / self.radius;
-            return true;
+                record.t = temp;
+                record.position = ray.point_at_paramater(record.t);
+                record.normal = (record.position - self.center) / self.radius;
+                return true;
+            }
         }
         return false;
     }

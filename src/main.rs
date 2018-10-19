@@ -32,9 +32,9 @@ const WIDTH: usize = 320;
 const HEIGHT: usize = 288;
 
 
-pub struct RayTracePixelConfig {
-    world: Arc<Hitable>,
-    material_library: Arc<MaterialLibrary>,
+pub struct RayTracePixelConfig<'a> {
+    world: &'a Hitable,
+    material_library: &'a MaterialLibrary,
     width: usize,
     height: usize,
     x: u32,
@@ -42,8 +42,8 @@ pub struct RayTracePixelConfig {
     number_of_samples: u32,
     index: usize
 }
-unsafe impl Send for RayTracePixelConfig{}
-unsafe impl Sync for RayTracePixelConfig{}
+unsafe impl<'a> Send for RayTracePixelConfig<'a>{}
+unsafe impl<'a> Sync for RayTracePixelConfig<'a>{}
 
 #[derive(Clone, Copy)]
 pub struct PixelColor {
@@ -67,7 +67,7 @@ pub fn render_thread(rtpc: &RayTracePixelConfig)  -> PixelColor {
         let u = (x + rng.gen_range(0.0, 1.0)) / rtpc.width as f32;
         let v = (y + rng.gen_range(0.0, 1.0)) / rtpc.height  as f32;
         let r = camera.get_ray(u, v);
-        return_color += color(&r, rtpc.world.clone(), &rtpc.material_library, 0);
+        return_color += color(&r, rtpc.world, &rtpc.material_library, 0);
     }
 
     return_color.x /= rtpc.number_of_samples as f32;
@@ -83,7 +83,7 @@ pub fn render_thread(rtpc: &RayTracePixelConfig)  -> PixelColor {
 }
 
 #[inline]
-pub fn color(ray: &Ray, world: Arc<Hitable>, material_library: &MaterialLibrary, depth: i32) -> Vector3<f32> {
+pub fn color(ray: &Ray, world: &Hitable, material_library: &MaterialLibrary, depth: i32) -> Vector3<f32> {
 
     let mut record : HitRecord = HitRecord::empty();
     if depth > 10 {
@@ -118,7 +118,7 @@ fn main() {
     let lambert_2_id = material_library.add_new(Box::new(Lambertian::new(Vector3::new(0.8, 0.8, 0.0))));
     let metal_1_id = material_library.add_new(Box::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 0.3)));
     let dielectric_1_id = material_library.add_new(Box::new(Deilectric::new(1.5)));
-    let arc_material_library = Arc::new(material_library);
+    //let arc_material_library = Arc::new(material_library);
 
     let world_list : Vec<Box<Hitable  + Send>> = vec![
         Box::new(Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5, lambert_1_id)),
@@ -127,7 +127,6 @@ fn main() {
         Box::new(Sphere::new(Vector3::new(-1.0, 0.0,-1.0), -0.45, dielectric_1_id)),
     ];
     let world = HitableList::new(world_list);
-    let arc_world = Arc::new(world);
 
 
     let mut buffer: Vec<u32> = vec![0;WIDTH * HEIGHT];
@@ -145,8 +144,8 @@ fn main() {
         for y in (0..HEIGHT).rev() {
             for x in 0..WIDTH {
                 let rtpc = RayTracePixelConfig {
-                    world: arc_world.clone(),
-                    material_library: arc_material_library.clone(),
+                    world: &world,
+                    material_library: &material_library,
                     width: WIDTH,
                     height: HEIGHT,
                     x: x as u32,
