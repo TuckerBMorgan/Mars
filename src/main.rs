@@ -29,7 +29,7 @@ use self::controls::Camera;
 use self::scene::*;
 
 const WIDTH: usize = 320;
-const HEIGHT: usize = 288;
+const HEIGHT: usize = 240;
 
 
 pub struct RayTracePixelConfig<'a> {
@@ -134,13 +134,10 @@ fn main() {
         panic!("{}", e);
     });
 //    window.
+    let mut ray_trace_pixel_configs = vec![];
+    let mut count = 0;
+
     let mut frame_count = 0;
-
-    while window.is_open() && !window.is_key_down(Key::Escape){
-        
-        let mut ray_trace_pixel_configs = vec![];
-        let mut count = 0;
-
         for y in (0..HEIGHT).rev() {
             for x in 0..WIDTH {
                 let rtpc = RayTracePixelConfig {
@@ -158,9 +155,15 @@ fn main() {
             }
         }
 
-        let par_iter : Vec<PixelColor> = ray_trace_pixel_configs.par_iter().map(|rtpc|render_thread(&rtpc)).collect();
+    while window.is_open() && !window.is_key_down(Key::Escape){
+        let mut par_iter : Vec<PixelColor> = ray_trace_pixel_configs.par_iter().map(|rtpc|render_thread(&rtpc)).collect();
+      //  par_iter.sort_by(|a, b|{return a.index.cmp(&b.index)});
+      //  let buffer_as_iter = buffer.iter_mut();
+
         for p in par_iter.iter() {
+            
             buffer[p.index] = p.color;
+        
         }
 
         frame_count+=1;

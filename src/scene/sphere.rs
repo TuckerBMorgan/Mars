@@ -29,7 +29,6 @@ impl Hitable for Sphere {
         record.material = self.material_id;
         let d = (b * b - a * c);
         if d > 0.0 {
-            
             let d = d.sqrt();
             let temp = (-b - d) / a;
             if temp < t_max && temp > t_min {
