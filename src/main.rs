@@ -137,7 +137,7 @@ fn main() {
 //    window.
     let mut frame_count = 0;
 
-    while true {
+    while window.is_open() && !window.is_key_down(Key::Escape){
         
         let mut ray_trace_pixel_configs = vec![];
         let mut count = 0;
