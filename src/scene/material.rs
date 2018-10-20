@@ -1,6 +1,6 @@
 use crate::math::*;
+use crate::euclid::Vector3D;
 use crate::scene::{HitRecord};
-use crate::na::Vector3;
 
 use crate::rand::{thread_rng, Rng};
 
@@ -36,12 +36,12 @@ impl MaterialLibrary {
 
 pub struct ScatterHit {
     pub result: bool,
-    pub attenuation: Vector3<f32>,
+    pub attenuation:Vector3D<f32>,
     pub scattered: Ray
 }
 
 impl ScatterHit {
-    pub fn new(result: bool, attenuation: Vector3<f32>, scattered: Ray) ->  ScatterHit {
+    pub fn new(result: bool, attenuation:Vector3D<f32>, scattered: Ray) ->  ScatterHit {
         ScatterHit {
             result,
             attenuation,
@@ -55,11 +55,11 @@ pub trait Material {
 }
 
 pub struct Lambertian {
-    pub albedo: Vector3<f32>,
+    pub albedo:Vector3D<f32>,
 }
 
 impl Lambertian {
-    pub fn new(albedo: Vector3<f32>) -> Lambertian {
+    pub fn new(albedo:Vector3D<f32>) -> Lambertian {
         Lambertian {
             albedo
         }
@@ -78,12 +78,12 @@ impl Material for Lambertian {
 }
 
 pub struct Metal {
-    pub albedo: Vector3<f32>,
+    pub albedo:Vector3D<f32>,
     pub fuzz: f32,
 }
 
 impl Metal {
-    pub fn new(albedo: Vector3<f32>, fuzz: f32) -> Metal {
+    pub fn new(albedo:Vector3D<f32>, fuzz: f32) -> Metal {
         let mut f = fuzz;
         if fuzz > 1.0 {
             f = 1.0;
@@ -98,10 +98,10 @@ impl Metal {
 
 impl Material for Metal {
  fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit {
-        let reflected = reflect(&ray_in.get_direction().normalize(), &record.normal);
-        let scattered = Ray::new(record.position, reflected + self.fuzz * random_in_unit_sphere());
+        let reflected = reflect(ray_in.get_direction().normalize(), record.normal);
+        let scattered = Ray::new(record.position, reflected + random_in_unit_sphere() * self.fuzz);
         let attenuation = self.albedo;
-        let result = scattered.get_direction().dot(&record.normal) > 0.0;
+        let result = scattered.get_direction().dot(record.normal) > 0.0;
         return ScatterHit::new(result, attenuation, scattered);
     }
 }
@@ -127,34 +127,34 @@ fn schlick(consine: f32, ref_index: f32) -> f32 {
 
 impl Material for Deilectric {
     fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit {  
-        let reflected = reflect(&ray_in.get_direction(), &record.normal);
+        let reflected = reflect(ray_in.get_direction(), record.normal);
         let outward_normal;
         let ni_over_nt;
         let consine;
-        let mut refracted = Vector3::new(0.0, 0.0, 0.0);
+        let mut refracted =Vector3D::new(0.0, 0.0, 0.0);
         let relfect_prob;
-        let mut scattered;
-        let attenuation = Vector3::new(1.0, 1.0, 1.0);
+        let scattered;
+        let attenuation =Vector3D::new(1.0, 1.0, 1.0);
 
-        if ray_in.get_direction().dot(&record.normal) > 0.0 {
+        if ray_in.get_direction().dot(record.normal) > 0.0 {
             outward_normal = -record.normal;
             ni_over_nt =  self.ref_index;
-            consine = self.ref_index * ray_in.get_direction().dot(&record.normal) / ray_in.get_direction().magnitude();
+            consine = self.ref_index * ray_in.get_direction().dot(record.normal) / ray_in.get_direction().length();
         }
         else {
             outward_normal = record.normal;
             ni_over_nt = 1.0 / self.ref_index;
-            consine = -ray_in.get_direction().dot(&record.normal) / ray_in.get_direction().magnitude();
+            consine = -ray_in.get_direction().dot(record.normal) / ray_in.get_direction().length();
         }
 
-        let refraction_test = refract(&ray_in.get_direction(), &outward_normal, ni_over_nt);
+        let refraction_test = refract(ray_in.get_direction(), outward_normal, ni_over_nt);
         match refraction_test {
             Some(val) => {
                 relfect_prob = schlick(consine, self.ref_index);
                 refracted = val;
             },
             None => {
-                scattered = Ray::new(record.position, reflected);
+                //scattered = Ray::new(record.position, reflected);
                 relfect_prob = 1.0;
             }
         }

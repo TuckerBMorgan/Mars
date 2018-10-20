@@ -7,9 +7,9 @@ edition = "2018"
 [dependencies]
 minifb = "*"
 #{ git = "/Users/tucker_morgan/Documents/rust_minifb"}
-nalgebra = "0.16.0"
 rand = "*"
 image = "*"
 spmc = "*"
 num_cpus = "1.0"
 rayon = "1.0"
+euclid = "*"

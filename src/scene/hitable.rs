@@ -1,12 +1,11 @@
-use crate::na::Vector3;
-use crate::math::Ray;
+use crate::math::{Ray};
 use crate::scene::{MaterialID};
-
+use crate::euclid::Vector3D;
 
 pub struct HitRecord {
     pub t: f32,
-    pub position: Vector3<f32>,
-    pub normal: Vector3<f32>,
+    pub position:Vector3D<f32>,
+    pub normal:Vector3D<f32>,
     pub material: MaterialID
 }
 
@@ -14,8 +13,8 @@ impl HitRecord {
     pub fn empty() -> HitRecord {
         HitRecord {
             t:0.0,
-            position: Vector3::new(0.0, 0.0, 0.0),
-            normal: Vector3::new(0.0, 0.0, 0.0),
+            position:Vector3D::new(0.0, 0.0, 0.0),
+            normal:Vector3D::new(0.0, 0.0, 0.0),
             material: 0
         }
     }

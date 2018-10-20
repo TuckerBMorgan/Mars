@@ -1,30 +1,22 @@
 extern crate minifb;
-extern crate nalgebra as na;
 extern crate rand;
 extern crate num_cpus;
 extern crate rayon;
+extern crate euclid;
+
 use crate::rand::{thread_rng, Rng};
 
 use minifb::{Key, WindowOptions, Window};
 use crate::rayon::prelude::*;
-
-
-
+use crate::euclid::Vector3D;
 pub mod math;
 pub mod controls;
 pub mod scene;
 
 
 use std::f32;
-use std::sync::mpsc::{Sender, Receiver};
-use std::sync::mpsc::channel;
-use std::sync::mpsc;
-use std::thread;
-use std::sync::Arc;
 
-use self::na::Vector3;
-
-use self::math::Ray;
+use self::math::{Ray};
 use self::controls::Camera;
 use self::scene::*;
 
@@ -58,7 +50,7 @@ pub fn render_thread(rtpc: &RayTracePixelConfig)  -> PixelColor {
 
     let camera = Camera::new(90.0, WIDTH as f32 / HEIGHT as f32);
 
-    let mut return_color : Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
+    let mut return_color :Vector3D<f32> =Vector3D::new(0.0, 0.0, 0.0);
 
     for _ in 0..rtpc.number_of_samples {
         let x = rtpc.x as f32;
@@ -83,11 +75,11 @@ pub fn render_thread(rtpc: &RayTracePixelConfig)  -> PixelColor {
 }
 
 #[inline]
-pub fn color(ray: &Ray, world: &Hitable, material_library: &MaterialLibrary, depth: i32) -> Vector3<f32> {
+pub fn color(ray: &Ray, world: &Hitable, material_library: &MaterialLibrary, depth: i32) ->Vector3D<f32> {
 
     let mut record : HitRecord = HitRecord::empty();
     if depth > 10 {
-        return Vector3::new(0.0, 0.0, 0.0);
+        return Vector3D::new(0.0, 0.0, 0.0);
     }
 
     if world.hit(ray, 0.001, f32::MAX, &mut record) == true {
@@ -97,9 +89,9 @@ pub fn color(ray: &Ray, world: &Hitable, material_library: &MaterialLibrary, dep
                 let scatter_hit = mat.scatter(ray, &record);
                 if scatter_hit.result == true {
                     let col = color(&scatter_hit.scattered, world, material_library, depth + 1);
-                    return Vector3::new(col.x*scatter_hit.attenuation.x, col.y * scatter_hit.attenuation.y, col.z * scatter_hit.attenuation.z);
+                    return Vector3D::new(col.x*scatter_hit.attenuation.x, col.y * scatter_hit.attenuation.y, col.z * scatter_hit.attenuation.z);
                 }
-                return Vector3::new(0.0, 0.0, 0.0);
+                return Vector3D::new(0.0, 0.0, 0.0);
             },
             None => {
                 panic!("Tried to unwrap a nonesistant material");
@@ -108,23 +100,23 @@ pub fn color(ray: &Ray, world: &Hitable, material_library: &MaterialLibrary, dep
     }
     let unit_direction = ray.get_direction().normalize();
     let t = 0.5 * (unit_direction.y + 1.0);
-    return (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
+    return Vector3D::new(1.0f32, 1.0f32, 1.0f32) * (1.0 - t) + Vector3D::new(0.5, 0.7, 1.0) * t;
 }
 
 fn main() {
-
+    let test = Vector3D::new(0.0, 0.0, 0.0) * 1.0;
     let mut material_library = MaterialLibrary::new();
-    let lambert_1_id = material_library.add_new(Box::new(Lambertian::new(Vector3::new(0.8, 0.3, 0.3))));
-    let lambert_2_id = material_library.add_new(Box::new(Lambertian::new(Vector3::new(0.8, 0.8, 0.0))));
-    let metal_1_id = material_library.add_new(Box::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 0.3)));
+    let lambert_1_id = material_library.add_new(Box::new(Lambertian::new(Vector3D::new(0.8, 0.3, 0.3))));
+    let lambert_2_id = material_library.add_new(Box::new(Lambertian::new(Vector3D::new(0.8, 0.8, 0.0))));
+    let metal_1_id = material_library.add_new(Box::new(Metal::new(Vector3D::new(0.8, 0.6, 0.2), 0.3)));
     let dielectric_1_id = material_library.add_new(Box::new(Deilectric::new(1.5)));
     //let arc_material_library = Arc::new(material_library);
 
     let world_list : Vec<Box<Hitable  + Send>> = vec![
-        Box::new(Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5, lambert_1_id)),
-        Box::new(Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0, lambert_2_id)),
-        Box::new(Sphere::new(Vector3::new(1.0, 0.0, -1.0), 0.5, metal_1_id)),
-        Box::new(Sphere::new(Vector3::new(-1.0, 0.0,-1.0), -0.45, dielectric_1_id)),
+        Box::new(Sphere::new(Vector3D::new(0.0, 0.0, -1.0), 0.5, lambert_1_id)),
+        Box::new(Sphere::new(Vector3D::new(0.0, -100.5, -1.0), 100.0, lambert_2_id)),
+        Box::new(Sphere::new(Vector3D::new(1.0, 0.0, -1.0), 0.5, metal_1_id)),
+        Box::new(Sphere::new(Vector3D::new(-1.0, 0.0,-1.0), -0.45, dielectric_1_id)),
     ];
     let world = HitableList::new(world_list);
 
@@ -157,13 +149,18 @@ fn main() {
 
     while window.is_open() && !window.is_key_down(Key::Escape){
         let mut par_iter : Vec<PixelColor> = ray_trace_pixel_configs.par_iter().map(|rtpc|render_thread(&rtpc)).collect();
-      //  par_iter.sort_by(|a, b|{return a.index.cmp(&b.index)});
-      //  let buffer_as_iter = buffer.iter_mut();
+        par_iter.sort_by(|a, b|{return a.index.cmp(&b.index)});
+        let mut buffer_as_iter = buffer.iter_mut();
 
+        // *buffer_as_iter.next().unwrap() += 1;
+    
         for p in par_iter.iter() {
-            
-            buffer[p.index] = p.color;
-        
+            //buffer[p.index] = p.color;
+//            *buffer_as_iter = p.color;
+           // buffer_as_iter.next().unwrap() = p.color;
+           *buffer_as_iter.next().unwrap() = p.color;
+
+           
         }
 
         frame_count+=1;
