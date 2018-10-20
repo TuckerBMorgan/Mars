@@ -5,7 +5,8 @@ use crate::euclid::Vector3D;
 pub struct Sphere  {
     center:Vector3D<f32>,
     radius: f32,
-    material_id: MaterialID
+    material_id: MaterialID,
+    radius_sqrd: f32
 }
 
 impl Sphere {
@@ -13,7 +14,8 @@ impl Sphere {
         Sphere {
             center,
             radius,
-            material_id
+            material_id,
+            radius_sqrd: radius * radius
         }
     }
 }
@@ -24,13 +26,13 @@ impl Hitable for Sphere {
         let oc = ray.get_origin() - self.center;
         let a = ray.direction.dot(ray.direction);
         let b = oc.dot(ray.direction);
-        let c = oc.dot(oc) - self.radius * self.radius;
-        record.material = self.material_id;
+        let c = oc.dot(oc) - self.radius_sqrd;
         let d = b * b - a * c;
         if d > 0.0 {
             let d = d.sqrt();
             let temp = (-b - d) / a;
             if temp < t_max && temp > t_min {
+                record.material = self.material_id;
                 record.t = temp;
                 record.position = ray.point_at_paramater(record.t);
                 record.normal = (record.position - self.center) / self.radius;
@@ -39,7 +41,7 @@ impl Hitable for Sphere {
 
             let temp = (-b + d) / a;
             if temp < t_max && temp > t_min {
-
+                record.material = self.material_id;
                 record.t = temp;
                 record.position = ray.point_at_paramater(record.t);
                 record.normal = (record.position - self.center) / self.radius;

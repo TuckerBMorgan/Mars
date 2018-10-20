@@ -110,7 +110,6 @@ fn main() {
     let lambert_2_id = material_library.add_new(Box::new(Lambertian::new(Vector3D::new(0.8, 0.8, 0.0))));
     let metal_1_id = material_library.add_new(Box::new(Metal::new(Vector3D::new(0.8, 0.6, 0.2), 0.3)));
     let dielectric_1_id = material_library.add_new(Box::new(Deilectric::new(1.5)));
-    //let arc_material_library = Arc::new(material_library);
 
     let world_list : Vec<Box<Hitable  + Send>> = vec![
         Box::new(Sphere::new(Vector3D::new(0.0, 0.0, -1.0), 0.5, lambert_1_id)),
