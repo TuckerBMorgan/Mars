@@ -13,3 +13,7 @@ spmc = "*"
 num_cpus = "1.0"
 rayon = "1.0"
 euclid = "*"
+
+[profile.release]
+lto = true
+codegen-units = 1
