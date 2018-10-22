@@ -30,7 +30,8 @@ const HEIGHT: usize = 240;
 
 pub struct RayTraceThreadConfig<'a> {
     rtpc: Vec<RayTracePixelConfig<'a>>,
-    sender: Sender<PixelColor>
+    sender: Sender<PixelColor>,
+    pixel_subset: &'a mut [u32]
 }
 unsafe impl<'a> Send for RayTraceThreadConfig<'a>{}
 unsafe impl<'a> Sync for RayTraceThreadConfig<'a>{}
@@ -86,8 +87,8 @@ pub fn render_simgle_pixel_thread(rtpc: &RayTracePixelConfig) -> PixelColor {
     return PixelColor{color: final_color, index: rtpc.index};
 }
 
-pub fn render_thread(thread_config: &RayTraceThreadConfig) {
-
+pub fn render_thread(thread_config: &mut RayTraceThreadConfig) {
+    let mut count = 0;
     for rtpc in &thread_config.rtpc {
         let mut rng = thread_rng();
 
@@ -114,7 +115,9 @@ pub fn render_thread(thread_config: &RayTraceThreadConfig) {
         let blue  = (255.0 * return_color.z).min(255.0).max(0.0);
 
         let final_color = ((red as u32) << 16 | (green as u32) << 8 | (blue as u32)).into();
-        let _ = thread_config.sender.send(PixelColor{color: final_color, index: rtpc.index});
+        thread_config.pixel_subset[count] = final_color;
+        count += 1;
+ //       let _ = thread_config.sender.send(PixelColor{color: final_color, index: rtpc.index});
     }
 }
 
@@ -165,65 +168,53 @@ fn main() {
 
 
     let mut buffer: Vec<u32> = vec![0;WIDTH * HEIGHT];
-    let mut chunks = buffer.chunks_mut(WIDTH);
     
     let mut window = Window::new("Test - ESC to exit", WIDTH, HEIGHT, WindowOptions::default()).unwrap_or_else(|e|{
         panic!("{}", e);
     });
 //    window.
-    let mut ray_trace_pixel_configs = vec![];
-    let mut count = 0;
 
     let (tx, rx) : (Sender<PixelColor>, Receiver<PixelColor>) = channel();
     let mut frame_count = 0;
-    for y in (0..HEIGHT).rev() {
-        let mut row = vec![];
-        for x in 0..WIDTH {
-            let rtpc = RayTracePixelConfig {
-                world: &world,
-                material_library: &material_library,
-                width: WIDTH,
-                height: HEIGHT,
-                x: x as u32,
-                y: y as u32,
-                number_of_samples: 4,
-                index: count
-            };
-            row.push(rtpc);
-            count += 1;
-        }
+    while window.is_open() && !window.is_key_down(Key::Escape) {
 
-        ray_trace_pixel_configs.push(
-            RayTraceThreadConfig{
-                rtpc: row,
-                sender: tx.clone()
-            }
-        );
-    }
-    let mut returned;
-    while window.is_open() && !window.is_key_down(Key::Escape){
-        let start = SystemTime::now();
-        returned = 0;
+        {
+            let mut chunks = buffer.chunks_mut(WIDTH);
+            let mut frame_count = 0;
         
-        let _ : Vec<_> = ray_trace_pixel_configs.par_iter().map(|rtpc|render_thread(&rtpc)).collect();
-        while returned != count {
-            let new_pixel = rx.recv().unwrap();
-            buffer[new_pixel.index] = new_pixel.color;
-            returned+=1;
-        }
-        /*
-        par_iter.sort_by(|a, b|{return a.index.cmp(&b.index)});
-        let mut buffer_as_iter = buffer.iter_mut();
+            let mut ray_trace_pixel_configs = vec![];
+            let mut count = 0;
 
-        for p in par_iter.iter() {
-           *buffer_as_iter.next().unwrap() = p.color;  
-        }
-        */
+            for y in (0..HEIGHT).rev() {
+                let mut row = vec![];
+                for x in 0..WIDTH {
+                    let rtpc = RayTracePixelConfig {
+                        world: &world,
+                        material_library: &material_library,
+                        width: WIDTH,
+                        height: HEIGHT,
+                        x: x as u32,
+                        y: y as u32,
+                        number_of_samples: 4,
+                        index: count
+                    };
+                    row.push(rtpc);
+                    count += 1;
+                }
 
-        frame_count+=1;
+                ray_trace_pixel_configs.push(
+                    RayTraceThreadConfig{
+                        rtpc: row,
+                        sender: tx.clone(),
+                        pixel_subset: chunks.next().unwrap()
+                    }
+                );
+            }
+            let _ : Vec<_> = ray_trace_pixel_configs.par_iter_mut().map(|rtpc|render_thread(rtpc)).collect();
+        }
+        frame_count += 1;
         window.update_with_buffer(&buffer).unwrap();
-        let elasped = start.duration_since(start).expect("Dealing with result of duration_since()");
-//        window.set_title().to_string().as_str());
+      window.set_title(frame_count.to_string().as_str());
   //      println!("{:?}", elasped.subsec_nanos());
     }
 }
