@@ -1,14 +1,24 @@
-use crate::scene::{Hitable, HitRecord};
+use crate::scene::{Hitable, HitRecord, HitableID};
 use crate::math::Ray;
 
 pub struct HitableList {
-    list: Vec<Box<Hitable + Send>>
+    list: Vec<Box<Hitable + Send>>,
+    id: HitableID
 }
 
 impl HitableList {
-    pub fn new(list: Vec<Box<Hitable + Send>>) -> HitableList {
+    pub fn new(mut list: Vec<Box<Hitable + Send>>) -> HitableList {
+        
+        let mut use_id = 1;
+        
+        for hit in list.iter_mut() {
+            hit.set_hitable_id(use_id);
+            use_id += 1;
+        }
+
         HitableList {
-            list
+            list,
+            id: 0
         }
     }
 }
@@ -27,7 +37,10 @@ impl Hitable for HitableList {
                 record.copy_over(&temp_rec);
             }
         }
-        
         return hit_anything;
+    }
+
+    fn set_hitable_id(&mut self, id: HitableID) {
+        self.id = id;
     }
 }

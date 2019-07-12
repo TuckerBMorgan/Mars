@@ -1,18 +1,17 @@
 [package]
 name = "mars"
 version = "0.1.0"
-authors = ["wintermute"]
+authors = ["marsmute"]
 edition = "2018"
 
 [dependencies]
 minifb = "*"
-#{ git = "/Users/tucker_morgan/Documents/rust_minifb"}
 rand = "*"
 image = "*"
 spmc = "*"
 num_cpus = "1.0"
 rayon = "1.0"
-euclid = "*"
+glam = "0.6.1"
 
 [profile.release]
 lto = true

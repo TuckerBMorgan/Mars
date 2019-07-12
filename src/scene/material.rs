@@ -1,5 +1,5 @@
 use crate::math::*;
-use crate::euclid::Vector3D;
+use crate::glam::Vec3;
 use crate::scene::{HitRecord};
 
 use crate::rand::{thread_rng, Rng};
@@ -36,12 +36,12 @@ impl MaterialLibrary {
 
 pub struct ScatterHit {
     pub result: bool,
-    pub attenuation:Vector3D<f32>,
+    pub attenuation:Vec3,
     pub scattered: Ray
 }
 
 impl ScatterHit {
-    pub fn new(result: bool, attenuation:Vector3D<f32>, scattered: Ray) ->  ScatterHit {
+    pub fn new(result: bool, attenuation:Vec3, scattered: Ray) ->  ScatterHit {
         ScatterHit {
             result,
             attenuation,
@@ -52,14 +52,15 @@ impl ScatterHit {
 
 pub trait Material {
     fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit;
+    fn color(&self, record: &HitRecord) -> Vec3;
 }
 
 pub struct Lambertian {
-    pub albedo:Vector3D<f32>,
+    pub albedo:Vec3,
 }
 
 impl Lambertian {
-    pub fn new(albedo:Vector3D<f32>) -> Lambertian {
+    pub fn new(albedo:Vec3) -> Lambertian {
         Lambertian {
             albedo
         }
@@ -75,15 +76,19 @@ impl Material for Lambertian {
             Ray::new(record.position, target - record.position)
         )
     }
+
+    fn color(&self, record: &HitRecord) -> Vec3 {
+        return self.albedo;
+    }
 }
 
 pub struct Metal {
-    pub albedo:Vector3D<f32>,
+    pub albedo:Vec3,
     pub fuzz: f32,
 }
 
 impl Metal {
-    pub fn new(albedo:Vector3D<f32>, fuzz: f32) -> Metal {
+    pub fn new(albedo:Vec3, fuzz: f32) -> Metal {
         let mut f = fuzz;
         if fuzz > 1.0 {
             f = 1.0;
@@ -97,12 +102,36 @@ impl Metal {
 }
 
 impl Material for Metal {
- fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit {
+    fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit {
         let reflected = reflect(ray_in.get_direction().normalize(), record.normal);
         let scattered = Ray::new(record.position, reflected + random_in_unit_sphere() * self.fuzz);
         let attenuation = self.albedo;
         let result = scattered.get_direction().dot(record.normal) > 0.0;
         return ScatterHit::new(result, attenuation, scattered);
+    }
+
+    fn color(&self, record: &HitRecord) -> Vec3 {
+        return self.albedo;
+    }
+}
+
+pub struct Sky {
+}
+
+impl Sky {
+    pub fn new() -> Sky {
+        Sky {}
+    }
+}
+
+impl Material for Sky {
+    fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit {
+        return ScatterHit::new(false, Vec3::new(1.0, 1.0, 1.0), Ray::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(1.0, 0.0, 0.0)));
+    }
+
+    fn color(&self, record: &HitRecord) -> Vec3 {
+        let t = 0.5 * (record.normal.y() + 1.0);
+        return Vec3::new(1.0f32, 1.0f32, 1.0f32) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t;//background color, I Think?    
     }
 }
 
@@ -131,10 +160,10 @@ impl Material for Deilectric {
         let outward_normal;
         let ni_over_nt;
         let consine;
-        let mut refracted =Vector3D::new(0.0, 0.0, 0.0);
+        let mut refracted =Vec3::new(0.0, 0.0, 0.0);
         let relfect_prob;
         let scattered;
-        let attenuation =Vector3D::new(1.0, 1.0, 1.0);
+        let attenuation = Vec3::new(1.0, 1.0, 1.0);
 
         if ray_in.get_direction().dot(record.normal) > 0.0 {
             outward_normal = -record.normal;
@@ -173,7 +202,10 @@ impl Material for Deilectric {
             true,
             attenuation,
             scattered
-        )
-        
+        )   
+    }
+
+    fn color(&self, record: &HitRecord) -> Vec3 {
+        return Vec3::new(1.0, 1.0, 1.0);
     }
 }

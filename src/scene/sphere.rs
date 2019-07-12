@@ -1,21 +1,23 @@
-use crate::scene::{Hitable, MaterialID, HitRecord};
+use crate::scene::{Hitable, MaterialID, HitRecord, HitableID};
 use crate::math::Ray;
-use crate::euclid::Vector3D;
+use crate::glam::Vec3;
 
 pub struct Sphere  {
-    center:Vector3D<f32>,
+    center:Vec3,
     radius: f32,
     material_id: MaterialID,
-    radius_sqrd: f32
+    radius_sqrd: f32,
+    id: HitableID
 }
 
 impl Sphere {
-    pub fn new(center:Vector3D<f32>, radius: f32, material_id: MaterialID) -> Sphere {
+    pub fn new(center:Vec3, radius: f32, material_id: MaterialID) -> Sphere {
         Sphere {
             center,
             radius,
             material_id,
-            radius_sqrd: radius * radius
+            radius_sqrd: radius * radius,
+            id: 0
         }
     }
 }
@@ -36,6 +38,7 @@ impl Hitable for Sphere {
                 record.t = temp;
                 record.position = ray.point_at_paramater(record.t);
                 record.normal = (record.position - self.center) / self.radius;
+                record.hitable = self.id;
                 return true;
             }
 
@@ -45,9 +48,15 @@ impl Hitable for Sphere {
                 record.t = temp;
                 record.position = ray.point_at_paramater(record.t);
                 record.normal = (record.position - self.center) / self.radius;
+                record.hitable = self.id;
                 return true;
             }
         }
         return false;
     }
+
+    fn set_hitable_id(&mut self, id: HitableID) {
+        self.id = id;
+    }
+
 }

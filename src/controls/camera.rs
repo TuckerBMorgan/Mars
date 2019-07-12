@@ -1,20 +1,20 @@
 use crate::math::Ray;
-use crate::euclid::Vector3D;
+use crate::glam::Vec3;
 
 pub struct Camera {
-    origin:Vector3D<f32>,
-    lower_left_corner:Vector3D<f32>,
-    vertical:Vector3D<f32>,
-    horizontal:Vector3D<f32>
+    origin:Vec3,
+    lower_left_corner:Vec3,
+    vertical:Vec3,
+    horizontal:Vec3
 }
 
 impl Camera {
     pub fn new(_vfov: f32, _aspect: f32) -> Camera {
         Camera{
-            lower_left_corner:Vector3D::new(-2.0, -1.0, -1.0),
-            horizontal:Vector3D::new(2.0 * 2.0, 0.0, 0.0),
-            vertical:Vector3D::new(0.0, 2.0 * 1.0, 0.0),
-            origin:Vector3D::new(0.0, 0.0, 0.0)
+            lower_left_corner:Vec3::new(-2.0, -1.0, -1.0),
+            horizontal:Vec3::new(2.0 * 2.0, 0.0, 0.0),
+            vertical:Vec3::new(0.0, 2.0 * 1.0, 0.0),
+            origin:Vec3::new(0.0, 0.0, 0.0)
         }
     }
 
