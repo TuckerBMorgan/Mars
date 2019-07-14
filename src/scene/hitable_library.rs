@@ -14,8 +14,9 @@ impl HitableLibrary {
         }
     }
 
-    pub fn add_hitable_to_library(&mut self, hitable: Box<Hitable + Send>) -> HitableID {
+    pub fn add_hitable_to_library(&mut self, mut hitable: Box<Hitable + Send>) -> HitableID {
         self.id_count += 1;
+        hitable.set_hitable_id(self.id_count);
         self.library.insert(self.id_count, hitable);
         return self.id_count;
     }

@@ -59,4 +59,12 @@ impl Hitable for Sphere {
         self.id = id;
     }
 
+    fn get_center(&self) -> Vec3 {
+        return self.center;
+    }
+
+    fn get_radius(&self) -> f32 {
+        return self.radius;
+    }
+
 }

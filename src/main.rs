@@ -83,16 +83,24 @@ pub fn render_thread(thread_config: &mut RayTraceThreadConfig) {
             let mut ray_color = Vec3::new(1.0, 1.0, 1.0);
             for i in 0..raycast_result.number_of_hits {
                 let hitresult = raycast_result.hits[i];
-                let material = rtpc.material_library.checkout_material(hitresult.material);//hitresult.material);
 
-                match material {
-                    Some(mat) => {
-                        ray_color *= mat.color(&hitresult);                
-                    },
-                    None => {
-                        panic!("{}", "Checked out bad material");
+                if hitresult.material != 6 && hitresult.material != 0 {
+                    let material = rtpc.material_library.checkout_material(hitresult.material);
+                    let object = rtpc.hitable_library.checkout_hitable(hitresult.hitable).unwrap();
+                    match material {
+                        Some(mat) => {
+                            ray_color *= mat.color(&hitresult, object.as_ref());                
+                        },
+                        None => {
+                            panic!("{}", "Checked out bad material");
+                        }
                     }
                 }
+                else if hitresult.material == 6 {
+                    let t = 0.5 * (hitresult.normal.y() + 1.0);
+                    ray_color *= Vec3::new(1.0f32, 1.0f32, 1.0f32) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t;//background color, I Think?    
+                }
+                
             }
             return_color += ray_color;
         }
@@ -145,7 +153,7 @@ fn main() {
     let test = Vec3::new(0.0, 0.0, 0.0) * 1.0;
     let mut material_library = MaterialLibrary::new();
     
-    let lambert_1_id = material_library.add_new(Box::new(Lambertian::new(Vec3::new(0.1, 0.7, 0.3))));
+    let lambert_1_id = material_library.add_new(Box::new(CheckerBoard::new(Vec3::new(0.1, 0.7, 0.3))));
     let lambert_2_id = material_library.add_new(Box::new(Lambertian::new(Vec3::new(0.8, 0.1, 0.0))));
     let metal_1_id = material_library.add_new(Box::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.3)));
     let dielectric_1_id = material_library.add_new(Box::new(Deilectric::new(1.5)));
@@ -215,6 +223,7 @@ fn main() {
                 );
             }
             let _ : Vec<_> = ray_trace_pixel_configs.par_iter_mut().map(|rtpc|render_thread(rtpc)).collect();
+//            let _ : Vec<_> = ray_trace_pixel_configs.iter_mut().map(|rtpc|render_thread(rtpc)).collect();
         }
         frame_count += 1;
         window.update_with_buffer(&buffer).unwrap();

@@ -2,33 +2,13 @@ use crate::scene::{Hitable, HitRecord, HitableID, HitableLibrary};
 use crate::math::Ray;
 
 pub struct HitableList {
-    list: Vec<Box<Hitable + Send>>,
-    id_list: Vec<HitableID>,
-    id: HitableID
+    id_list: Vec<HitableID>
 }
 
 impl HitableList {
-    pub fn new(mut list: Vec<Box<Hitable + Send>>) -> HitableList {
-        
-        let mut use_id = 1;
-        
-        for hit in list.iter_mut() {
-            hit.set_hitable_id(use_id);
-            use_id += 1;
-        }
-
-        HitableList {
-            list,
-            id_list: vec![],
-            id: 0
-        }
-    }
-
     pub fn new_with_hitable_id_list(list: Vec<HitableID>) -> HitableList {
         HitableList {
-            list: vec![],
-            id_list: list,
-            id: 0
+            id_list: list
         }
     }
 

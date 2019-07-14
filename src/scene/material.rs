@@ -1,6 +1,6 @@
 use crate::math::*;
 use crate::glam::Vec3;
-use crate::scene::{HitRecord};
+use crate::scene::{HitRecord, Hitable};
 
 use crate::rand::{thread_rng, Rng};
 
@@ -52,7 +52,7 @@ impl ScatterHit {
 
 pub trait Material {
     fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit;
-    fn color(&self, record: &HitRecord) -> Vec3;
+    fn color(&self, record: &HitRecord, hitable: &Hitable) -> Vec3;
 }
 
 pub struct Lambertian {
@@ -77,8 +77,41 @@ impl Material for Lambertian {
         )
     }
 
-    fn color(&self, record: &HitRecord) -> Vec3 {
+    fn color(&self, record: &HitRecord, hitable: &Hitable) -> Vec3 {
         return self.albedo;
+    }
+}
+
+
+pub struct CheckerBoard {
+    pub albedo:Vec3,
+}
+
+impl CheckerBoard {
+    pub fn new(albedo:Vec3) -> CheckerBoard {
+        CheckerBoard {
+            albedo
+        }
+    }
+}
+
+impl Material for CheckerBoard {
+    fn scatter(&self, _ray_in: &Ray, record: &HitRecord) -> ScatterHit {
+        let target = record.position + record.normal + random_in_unit_sphere();
+        ScatterHit::new(
+            true,
+            self.albedo.clone(),
+            Ray::new(record.position, target - record.position)
+        )
+    }
+
+    fn color(&self, record: &HitRecord, hitable: &Hitable) -> Vec3 {
+        if record.position.y() > hitable.get_center().y() / 2.0f32 {
+            return Vec3::new(0.0f32, 0.0f32, self.albedo.z());
+        }
+        else {
+            return self.albedo;
+        }
     }
 }
 
@@ -110,7 +143,7 @@ impl Material for Metal {
         return ScatterHit::new(result, attenuation, scattered);
     }
 
-    fn color(&self, record: &HitRecord) -> Vec3 {
+    fn color(&self, record: &HitRecord, hitable: &Hitable) -> Vec3 {
         return self.albedo;
     }
 }
@@ -129,7 +162,7 @@ impl Material for Sky {
         return ScatterHit::new(false, Vec3::new(1.0, 1.0, 1.0), Ray::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(1.0, 0.0, 0.0)));
     }
 
-    fn color(&self, record: &HitRecord) -> Vec3 {
+    fn color(&self, record: &HitRecord, hitable: &Hitable) -> Vec3 {
         let t = 0.5 * (record.normal.y() + 1.0);
         return Vec3::new(1.0f32, 1.0f32, 1.0f32) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t;//background color, I Think?    
     }
@@ -183,7 +216,6 @@ impl Material for Deilectric {
                 refracted = val;
             },
             None => {
-                //scattered = Ray::new(record.position, reflected);
                 relfect_prob = 1.0;
             }
         }
@@ -205,7 +237,7 @@ impl Material for Deilectric {
         )   
     }
 
-    fn color(&self, record: &HitRecord) -> Vec3 {
+    fn color(&self, record: &HitRecord, hitable: &Hitable) -> Vec3 {
         return Vec3::new(1.0, 1.0, 1.0);
     }
 }
