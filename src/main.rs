@@ -42,6 +42,7 @@ unsafe impl<'a> Sync for RayTraceThreadConfig<'a>{}
 pub struct RayTracePixelConfig<'a> {
     world: &'a HitableList,
     material_library: &'a MaterialLibrary,
+    hitable_library: &'a HitableLibrary,
     width: usize,
     height: usize,
     x: u32,
@@ -75,7 +76,7 @@ pub fn render_thread(thread_config: &mut RayTraceThreadConfig) {
             let u = (x + rng.gen_range(0.0, 1.0)) / rtpc.width as f32;
             let v = (y + rng.gen_range(0.0, 1.0)) / rtpc.height  as f32;
             let r = camera.get_ray(u, v);
-            cast_ray(&r, rtpc.world, &rtpc.material_library, 0, &mut raycastresult[i as usize]);
+            cast_ray(&r, rtpc.world, &rtpc.material_library, 0, &mut raycastresult[i as usize], &rtpc.hitable_library);
         }
 
         for raycast_result in raycastresult.iter() {
@@ -111,21 +112,21 @@ pub fn render_thread(thread_config: &mut RayTraceThreadConfig) {
 }
 
 #[inline]
-pub fn cast_ray(ray: &Ray, world: &HitableList, material_library: &MaterialLibrary, depth: i32, raycastresult: &mut RayCastResult) {
+pub fn cast_ray(ray: &Ray, world: &HitableList, material_library: &MaterialLibrary, depth: i32, raycastresult: &mut RayCastResult, hitable_library: &HitableLibrary) {
     //it is not important in what order I solve my child rays, just that I solve them
     if depth >= 10 {
         return;
     }
 
     let mut record : &mut HitRecord = &mut raycastresult.hits[raycastresult.number_of_hits];
-    if world.cast_ray_into_world(ray, 0.001, f32::MAX, record) == true {
+    if world.cast_ray_into_world(ray, 0.001, f32::MAX, record, hitable_library) == true {
         let material = material_library.checkout_material(record.material);
         match &material {
             Some(mat) => {
                 let scatter_hit = mat.scatter(ray, &record);
                 if scatter_hit.result == true {
                     raycastresult.number_of_hits += 1;
-                    cast_ray(&scatter_hit.scattered, world, material_library, depth + 1, raycastresult);
+                    cast_ray(&scatter_hit.scattered, world, material_library, depth + 1, raycastresult, hitable_library);
                 }
                 return;
             },
@@ -140,36 +141,6 @@ pub fn cast_ray(ray: &Ray, world: &HitableList, material_library: &MaterialLibra
     raycastresult.number_of_hits += 1;
 }
 
-#[inline]
-pub fn color(ray: &Ray, world: &HitableList, material_library: &MaterialLibrary, depth: i32) -> Vec3 {
-
-    if depth > 10 {
-        return Vec3::new(0.0, 0.0, 0.0);
-    }
-
-    let mut record : HitRecord = HitRecord::empty();
-    if world.cast_ray_into_world(ray, 0.001, f32::MAX, &mut record) == true {
-        let material = material_library.checkout_material(record.material);
-        match &material {
-            Some(mat) => {
-                let scatter_hit = mat.scatter(ray, &record);
-                if scatter_hit.result == true {
-                    let col = color(&scatter_hit.scattered, world, material_library, depth + 1);
-                    return Vec3::new(col.x() * scatter_hit.attenuation.x(), col.y() * scatter_hit.attenuation.y(), col.z() * scatter_hit.attenuation.z());
-                }
-                return Vec3::new(0.0, 0.0, 0.0);
-            },
-            None => {
-                panic!("Tried to unwrap a nonesistant material");
-            }
-        }
-    }
-
-    let unit_direction = ray.get_direction().normalize();
-    let t = 0.5 * (unit_direction.y() + 1.0);
-    return Vec3::new(1.0f32, 1.0f32, 1.0f32) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t;//background color, I Think?
-}
-
 fn main() {
     let test = Vec3::new(0.0, 0.0, 0.0) * 1.0;
     let mut material_library = MaterialLibrary::new();
@@ -178,10 +149,10 @@ fn main() {
     let lambert_2_id = material_library.add_new(Box::new(Lambertian::new(Vec3::new(0.8, 0.1, 0.0))));
     let metal_1_id = material_library.add_new(Box::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.3)));
     let dielectric_1_id = material_library.add_new(Box::new(Deilectric::new(1.5)));
-    let sky_material = material_library.add_new(Box::new(Sky::new()));
+    let _ = material_library.add_new(Box::new(Sky::new()));
 
 
-    let world_list : Vec<Box<Hitable  + Send>> = vec![
+    let _ : Vec<Box<Hitable  + Send>> = vec![
         Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, lambert_1_id)),
         Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, lambert_2_id)),
         Box::new(Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, metal_1_id)),
@@ -223,6 +194,7 @@ fn main() {
                     let rtpc = RayTracePixelConfig {
                         world: &world,
                         material_library: &material_library,
+                        hitable_library: &hitable_library,
                         width: WIDTH,
                         height: HEIGHT,
                         x: x as u32,
