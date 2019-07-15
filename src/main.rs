@@ -129,12 +129,16 @@ pub fn cast_ray(ray: &Ray, world: &HitableList, material_library: &MaterialLibra
     let mut record : &mut HitRecord = &mut raycastresult.hits[raycastresult.number_of_hits];
     if world.cast_ray_into_world(ray, 0.001, f32::MAX, record, hitable_library) == true {
         let material = material_library.checkout_material(record.material);
+        let object = hitable_library.checkout_hitable(record.hitable);
+
         match &material {
             Some(mat) => {
-                let scatter_hit = mat.scatter(ray, &record);
-                if scatter_hit.result == true {
-                    raycastresult.number_of_hits += 1;
-                    cast_ray(&scatter_hit.scattered, world, material_library, depth + 1, raycastresult, hitable_library);
+                if object.is_some() {
+                    let scatter_hit = mat.scatter(ray, &record, object.unwrap().as_ref());
+                    if scatter_hit.result == true {
+                        raycastresult.number_of_hits += 1;
+                        cast_ray(&scatter_hit.scattered, world, material_library, depth + 1, raycastresult, hitable_library);
+                    }
                 }
                 return;
             },
@@ -154,7 +158,7 @@ fn main() {
     let mut material_library = MaterialLibrary::new();
     
     let lambert_1_id = material_library.add_new(Box::new(CheckerBoard::new(Vec3::new(0.1, 0.7, 0.3))));
-    let lambert_2_id = material_library.add_new(Box::new(Lambertian::new(Vec3::new(0.8, 0.1, 0.0))));
+    let lambert_2_id = material_library.add_new(Box::new(Lambertian::new(Vec3::new(0.3, 0.1, 0.6))));
     let metal_1_id = material_library.add_new(Box::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.3)));
     let dielectric_1_id = material_library.add_new(Box::new(Deilectric::new(1.5)));
     let _ = material_library.add_new(Box::new(Sky::new()));

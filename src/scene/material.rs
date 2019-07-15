@@ -51,7 +51,7 @@ impl ScatterHit {
 }
 
 pub trait Material {
-    fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit;
+    fn scatter(&self, ray_in: &Ray, record: &HitRecord, hitable: &Hitable) -> ScatterHit;
     fn color(&self, record: &HitRecord, hitable: &Hitable) -> Vec3;
 }
 
@@ -68,7 +68,7 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, _ray_in: &Ray, record: &HitRecord) -> ScatterHit {
+    fn scatter(&self, _ray_in: &Ray, record: &HitRecord, hitable: &Hitable) -> ScatterHit {
         let target = record.position + record.normal + random_in_unit_sphere();
         ScatterHit::new(
             true,
@@ -98,13 +98,40 @@ impl CheckerBoard {
 }
 
 impl Material for CheckerBoard {
-    fn scatter(&self, _ray_in: &Ray, record: &HitRecord) -> ScatterHit {
-        let target = record.position + record.normal + random_in_unit_sphere();
-        ScatterHit::new(
-            true,
-            self.albedo.clone(),
-            Ray::new(record.position, target - record.position)
-        )
+    fn scatter(&self, ray_in: &Ray, record: &HitRecord, hitable: &Hitable) -> ScatterHit {
+    
+        let d = (hitable.get_center() - record.position).normalize();
+        let u = 0.5f32 + (d.z().atan2(d.x()) / 2.0f32 * std::f64::consts::PI as f32);
+        let v = 0.5f32 + (d.y().asin() / std::f64::consts::PI as f32);
+
+        if (u * 5.0f32) as i32 % 2 == 0 {
+            if (v * 10.0f32) as i32 % 2 == 0 {
+                let target = record.position + record.normal + random_in_unit_sphere();
+                ScatterHit::new(
+                    true,
+                    self.albedo.clone(),
+                    Ray::new(record.position, target - record.position)
+                )
+
+            }
+            else {
+                return self.metal_material.scatter(ray_in, record, hitable);
+            }
+        }
+        else {
+            if (v * 10.0f32) as i32 % 2 == 0 {
+                return self.metal_material.scatter(ray_in, record, hitable);
+            }
+            else {
+                let target = record.position + record.normal + random_in_unit_sphere();
+                ScatterHit::new(
+                    true,
+                    self.albedo.clone(),
+                    Ray::new(record.position, target - record.position)
+                )
+            }
+        }
+
     }
 
     fn color(&self, record: &HitRecord, hitable: &Hitable) -> Vec3 {
@@ -113,7 +140,7 @@ impl Material for CheckerBoard {
         let u = 0.5f32 + (d.z().atan2(d.x()) / 2.0f32 * std::f64::consts::PI as f32);
         let v = 0.5f32 + (d.y().asin() / std::f64::consts::PI as f32);
 
-        if (u * 10.0f32) as i32 % 2 == 0 {
+        if (u * 5.0f32) as i32 % 2 == 0 {
             if (v * 10.0f32) as i32 % 2 == 0 {
                 return Vec3::new(1.0, 0.0, 0.0);
             }
@@ -152,7 +179,7 @@ impl Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit {
+    fn scatter(&self, ray_in: &Ray, record: &HitRecord, hitable: &Hitable) -> ScatterHit {
         let reflected = reflect(ray_in.get_direction().normalize(), record.normal);
         let scattered = Ray::new(record.position, reflected + random_in_unit_sphere() * self.fuzz);
         let attenuation = self.albedo;
@@ -175,7 +202,7 @@ impl Sky {
 }
 
 impl Material for Sky {
-    fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit {
+    fn scatter(&self, ray_in: &Ray, record: &HitRecord, hitable: &Hitable) -> ScatterHit {
         return ScatterHit::new(false, Vec3::new(1.0, 1.0, 1.0), Ray::new(Vec3::new(0.0, 0.0, 0.0), Vec3::new(1.0, 0.0, 0.0)));
     }
 
@@ -205,7 +232,7 @@ fn schlick(consine: f32, ref_index: f32) -> f32 {
 }
 
 impl Material for Deilectric {
-    fn scatter(&self, ray_in: &Ray, record: &HitRecord) -> ScatterHit {  
+    fn scatter(&self, ray_in: &Ray, record: &HitRecord, hitable: &Hitable) -> ScatterHit {  
         let reflected = reflect(ray_in.get_direction(), record.normal);
         let outward_normal;
         let ni_over_nt;
