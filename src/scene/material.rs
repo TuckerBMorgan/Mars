@@ -85,12 +85,14 @@ impl Material for Lambertian {
 
 pub struct CheckerBoard {
     pub albedo:Vec3,
+    pub metal_material: Metal
 }
 
 impl CheckerBoard {
     pub fn new(albedo:Vec3) -> CheckerBoard {
         CheckerBoard {
-            albedo
+            albedo,
+            metal_material: Metal::new(Vec3::new(0.3f32, 0.432, 0.7f32), 0.0f32)
         }
     }
 }
@@ -106,11 +108,26 @@ impl Material for CheckerBoard {
     }
 
     fn color(&self, record: &HitRecord, hitable: &Hitable) -> Vec3 {
-        if record.position.y() > hitable.get_center().y() / 2.0f32 {
-            return Vec3::new(0.0f32, 0.0f32, self.albedo.z());
+
+        let d = (hitable.get_center() - record.position).normalize();
+        let u = 0.5f32 + (d.z().atan2(d.x()) / 2.0f32 * std::f64::consts::PI as f32);
+        let v = 0.5f32 + (d.y().asin() / std::f64::consts::PI as f32);
+
+        if (u * 10.0f32) as i32 % 2 == 0 {
+            if (v * 10.0f32) as i32 % 2 == 0 {
+                return Vec3::new(1.0, 0.0, 0.0);
+            }
+            else {
+                return self.metal_material.color(record, hitable);
+            }
         }
         else {
-            return self.albedo;
+            if (v * 10.0f32) as i32 % 2 == 0 {
+                return self.metal_material.color(record, hitable);
+            }
+            else {
+                return Vec3::new(1.0, 0.0, 0.0);        
+            }
         }
     }
 }
