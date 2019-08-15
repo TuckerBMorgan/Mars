@@ -55,6 +55,7 @@ impl HitRecord {
 
 pub trait Hitable: Send {
     fn hit(&self, ray: &Ray, t_min: f32, t_mac: f32, record: &mut HitRecord) -> bool;
+    fn quick_hit(&self, ray: &Ray) -> bool;
     fn set_hitable_id(&mut self, id: HitableID);
     fn get_center(&self) -> Vec3;
     fn get_radius(&self) -> f32;

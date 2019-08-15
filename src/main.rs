@@ -3,7 +3,7 @@ extern crate rand;
 extern crate num_cpus;
 extern crate rayon;
 extern crate glam;
-
+extern crate bvh;
 
 pub mod math;
 pub mod controls;
@@ -21,6 +21,9 @@ use rand::{thread_rng, Rng};
 use minifb::{Key, WindowOptions, Window};
 use rayon::prelude::*;
 use glam::Vec3;
+
+use bvh::bvh::BVH;
+use bvh::*;
 
 
 use self::math::{Ray};
@@ -72,7 +75,7 @@ pub fn render_thread(thread_config: &mut RayTraceThreadConfig) {
         for i in 0..thread_config.number_of_samples {
             let x = rtpc.x as f32;
             let y = rtpc.y as f32;
-
+ 
             let u = (x + rng.gen_range(0.0, 1.0)) / rtpc.width as f32;
             let v = (y + rng.gen_range(0.0, 1.0)) / rtpc.height  as f32;
             let r = camera.get_ray(u, v);
@@ -81,14 +84,17 @@ pub fn render_thread(thread_config: &mut RayTraceThreadConfig) {
 
         for raycast_result in raycastresult.iter() {
             let mut ray_color = Vec3::new(1.0, 1.0, 1.0);
+            if raycast_result.number_of_hits == 0 {
+                ray_color = Vec3::new(0.0, 0.0, 0.0);
+            }
             for i in 0..raycast_result.number_of_hits {
                 let hitresult = raycast_result.hits[i];
 
                 if hitresult.material != 6 && hitresult.material != 0 {
                     let material = rtpc.material_library.checkout_material(hitresult.material);
-                    let object = rtpc.hitable_library.checkout_hitable(hitresult.hitable).unwrap();
                     match material {
                         Some(mat) => {
+                            let object = rtpc.hitable_library.checkout_hitable(hitresult.hitable).unwrap();
                             ray_color *= mat.color(&hitresult, object.as_ref());                
                         },
                         None => {
@@ -97,7 +103,7 @@ pub fn render_thread(thread_config: &mut RayTraceThreadConfig) {
                     }
                 }
                 else if hitresult.material == 6 {
-                    let t = 0.5 * (hitresult.normal.y() + 1.0);
+                    let t = 0.5 * (hitresult.position.y() + 1.0);
                     ray_color *= Vec3::new(1.0f32, 1.0f32, 1.0f32) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t;//background color, I Think?    
                 }
                 
@@ -109,11 +115,10 @@ pub fn render_thread(thread_config: &mut RayTraceThreadConfig) {
         return_color.set_y(return_color.y() / thread_config.number_of_samples as f32);
         return_color.set_z(return_color.z() / thread_config.number_of_samples as f32);
 
-        let red   = (255.0 * return_color.x()).min(255.0).max(0.0);
-        let green = (255.0 * return_color.y()).min(255.0).max(0.0);
-        let blue  = (255.0 * return_color.z()).min(255.0).max(0.0);
-
+        let (red, green, blue) = (return_color.min(Vec3::one()).max(Vec3::zero()) * 255.0).into();
         let final_color = ((red as u32) << 16 | (green as u32) << 8 | (blue as u32)).into();
+
+
         thread_config.pixel_subset[count] = final_color;
         count += 1;
     }
@@ -121,18 +126,26 @@ pub fn render_thread(thread_config: &mut RayTraceThreadConfig) {
 
 #[inline]
 pub fn cast_ray(ray: &Ray, world: &HitableList, material_library: &MaterialLibrary, depth: i32, raycastresult: &mut RayCastResult, hitable_library: &HitableLibrary) {
-    //it is not important in what order I solve my child rays, just that I solve them
     if depth >= 10 {
         return;
     }
 
     let mut record : &mut HitRecord = &mut raycastresult.hits[raycastresult.number_of_hits];
+    //really fake lighting check
+    
+    if depth == 1 {
+        if world.cast_ray_into_world(&Ray::new(Vec3::new(ray.origin.x(), ray.origin.y(), ray.origin.z()), Vec3::new(0.0, 0.0, 1.0)), 0.001, f32::MAX, record, hitable_library) {
+            raycastresult.number_of_hits -=1;
+            return;
+        }
+    }
+    
     if world.cast_ray_into_world(ray, 0.001, f32::MAX, record, hitable_library) == true {
         let material = material_library.checkout_material(record.material);
-        let object = hitable_library.checkout_hitable(record.hitable);
 
         match &material {
             Some(mat) => {
+                let object = hitable_library.checkout_hitable(record.hitable);
                 if object.is_some() {
                     let scatter_hit = mat.scatter(ray, &record, object.unwrap().as_ref());
                     if scatter_hit.result == true {
@@ -173,6 +186,16 @@ fn main() {
 
     let mut hitable_library = HitableLibrary::new();
 
+        /*
+    let mut hitable_id_list = vec![
+        Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, lambert_1_id),
+        Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, lambert_2_id),
+        Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, metal_1_id),
+        Sphere::new(Vec3::new(-1.0, 0.0,-1.0), -0.45, dielectric_1_id)
+    ];
+    */
+
+    
     let hitable_id_list = vec![
         hitable_library.add_hitable_to_library(Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, lambert_1_id))),
         hitable_library.add_hitable_to_library(Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, lambert_2_id))),
@@ -180,6 +203,7 @@ fn main() {
         hitable_library.add_hitable_to_library(Box::new(Sphere::new(Vec3::new(-1.0, 0.0,-1.0), -0.45, dielectric_1_id)))
     ];
     
+
     let world = HitableList::new_with_hitable_id_list(hitable_id_list);
 
 

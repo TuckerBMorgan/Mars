@@ -7,7 +7,8 @@ pub struct Sphere  {
     radius: f32,
     material_id: MaterialID,
     radius_sqrd: f32,
-    id: HitableID
+    id: HitableID,
+    node_index: usize
 }
 
 impl Sphere {
@@ -17,7 +18,8 @@ impl Sphere {
             radius,
             material_id,
             radius_sqrd: radius * radius,
-            id: 0
+            id: 0,
+            node_index: 0
         }
     }
 }
@@ -55,6 +57,16 @@ impl Hitable for Sphere {
         return false;
     }
 
+    #[inline]
+    fn quick_hit(&self, ray: &Ray) -> bool {        
+        let oc = ray.get_origin() - self.center;
+        let a = ray.direction.dot(ray.direction);
+        let b = oc.dot(ray.direction);
+        let c = oc.dot(oc) - self.radius_sqrd;
+        let d = b * b - a * c;
+        return d > 0.0;
+    }
+
     fn set_hitable_id(&mut self, id: HitableID) {
         self.id = id;
     }
@@ -66,5 +78,4 @@ impl Hitable for Sphere {
     fn get_radius(&self) -> f32 {
         return self.radius;
     }
-
 }

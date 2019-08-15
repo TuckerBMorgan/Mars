@@ -12,6 +12,7 @@ spmc = "*"
 num_cpus = "1.0"
 rayon = "1.0"
 glam = "0.6.1"
+bvh = "0.3.1"
 
 [profile.release]
 lto = true
